@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+
+    <color name="primary">#1a237e</color>
+    <color name="background_light">#F5F5F5</color>
+    <color name="warning">#F44336</color>
+    <color name="warning_bg">#FFF3F3</color>
+
+
+
+    <color name="dark_blue">#1a237e</color>
+    <color name="dark_blue_variant">#000051</color>
+    <color name="light_blue">#64b5f6</color>
+    <color name="light_blue_variant">#9be7ff</color>
+
+    <!-- Background Colors -->
+    <color name="light_gray">#f5f5f5</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Text Colors -->
+    <color name="dark_gray">#333333</color>
+    <color name="medium_gray">#666666</color>
+    <color name="light_text_gray">#757575</color>
+
+    <!-- Status Colors -->
+    <color name="success_green">#43a047</color>
+    <color name="warning_amber">#ffa000</color>
+    <color name="error_red">#d32f2f</color>
+    <color name="info_blue">#2196f3</color>
+
+    <!-- Overlay Colors -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#26000000</color>
+
+    <!-- Card and Surface Colors -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="surface_variant">#f8f9fa</color>
+
+    <!-- Ripple Effect Color -->
+    <color name="ripple_color">#1F000000</color>
+
+    <!-- Status Bar Color -->
+    <color name="status_bar">#000051</color>
+
+    <!-- Disabled States -->
+    <color name="disabled_gray">#BDBDBD</color>
+    <color name="disabled_text">#61000000</color>
+
+    <!-- Divider Color -->
+    <color name="divider">#E0E0E0</color>
+
+    <!-- Inventory Status Colors -->
+    <color name="low_stock">#ff7043</color>
+    <color name="in_stock">#66bb6a</color>
+
+
+    <color name="stat_blue">#2196F3</color>
+    <color name="stat_red">#F44336</color>
+    <color name="stat_green">#4CAF50</color>
+    <color name="stat_purple">#9C27B0</color>
+
+    <color name="text_primary">@color/dark_gray</color>
+    <color name="text_secondary">@color/medium_gray</color>
+    <color name="text_tertiary">@color/light_text_gray</color>
+
+    <color name="primary_light">#9FA8DA</color>
+    <color name="error">@color/error_red</color>
+
+</resources>

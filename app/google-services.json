@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "632738653766",
+    "project_id": "warewise-618a6",
+    "storage_bucket": "warewise-618a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:632738653766:android:812b53b188c1954ea78c47",
+        "android_client_info": {
+          "package_name": "com.example.inventoryapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEZrCYKdHr-PbDiEwXlLNQfw4bkYkmpqY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
