@@ -1,14 +1,16 @@
 package com.example.inventoryapp.models
 
 data class InventoryItem(
-    val id: String = "",
-    val name: String = "",
-    val category: String = "",
-    val currentStock: Int = 0,
-    val minStock: Int = 0,
-    val price: Double = 0.0,
-    val location: ItemLocation = ItemLocation(),
-    val createdAt: Long = 0L,
-    val updatedAt: Long = 0L,
-    val updatedBy: String = ""
+    val id: String,
+    val name: String,
+    val description: String?,
+    val categoryId: String,
+    var currentStock: Int,
+    val minStock: Int,
+    val price: Float,
+    val warehouseId: String,
+    val floor: String?,
+    val section: String?,
+    val status: String,
+    val sku: String
 )

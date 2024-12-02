@@ -1,7 +1,10 @@
 package com.example.inventoryapp.models
 
 data class Warehouse(
-    var id: String = "",
-    val name: String = "",
-    val floors: Map<String, Floor> = emptyMap()
+    val id: String,
+    val name: String,
+    val location: String,
+    val address: String?,
+    val floors: List<String>,    // Changed to List since we store arrays
+    val sections: List<String>   // Changed to List since we store arrays
 )

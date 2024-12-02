@@ -87,4 +87,6 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
     implementation ("com.github.ibrahimsn98:NiceBottomBar:2.2")
+
+    implementation("io.appwrite:sdk-for-kotlin:6.1.0")
 }

@@ -2,51 +2,35 @@ package com.example.inventoryapp.activities
 
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.inventoryapp.R
+import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.AppwriteManager
+import com.example.inventoryapp.databinding.ActivityForgotPasswordBinding
 import com.example.inventoryapp.utils.LoadingDialog
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
-import com.google.firebase.auth.FirebaseAuth
+import io.appwrite.exceptions.AppwriteException
+import io.appwrite.services.Account
+import kotlinx.coroutines.launch
 
 class ForgotPasswordActivity : AppCompatActivity() {
-    private lateinit var auth: FirebaseAuth
-
-    private lateinit var emailInput: TextInputEditText
-    private lateinit var emailInputLayout: TextInputLayout
-    private lateinit var resetButton: MaterialButton
-    private lateinit var backButton: ImageView
+    private lateinit var binding: ActivityForgotPasswordBinding
     private lateinit var loadingDialog: LoadingDialog
+    private val account = Account(AppwriteManager.getClient())
 
     private var isCooldownActive = false
     private val cooldownDuration: Long = 30000 // 30 seconds cooldown
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_forgot_password)
+        binding = ActivityForgotPasswordBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        initializeFirebase()
-        initializeViews()
+        loadingDialog = LoadingDialog(this)
         setupClickListeners()
     }
 
-    private fun initializeFirebase() {
-        auth = FirebaseAuth.getInstance()
-    }
-
-    private fun initializeViews() {
-        emailInput = findViewById(R.id.emailInput)
-        emailInputLayout = findViewById(R.id.emailInputLayout)
-        resetButton = findViewById(R.id.resetButton)
-        backButton = findViewById(R.id.backButton)
-        loadingDialog = LoadingDialog(this)
-    }
-
     private fun setupClickListeners() {
-        resetButton.setOnClickListener {
+        binding.resetButton.setOnClickListener {
             if (isCooldownActive) {
                 Toast.makeText(this, "Please wait before trying again.", Toast.LENGTH_SHORT).show()
             } else {
@@ -54,55 +38,73 @@ class ForgotPasswordActivity : AppCompatActivity() {
             }
         }
 
-        backButton.setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
         }
     }
 
     private fun handlePasswordReset() {
-        val email = emailInput.text.toString().trim()
+        val email = binding.emailInput.text.toString().trim()
         if (!validateEmail(email)) return
 
         loadingDialog.show()
+        lifecycleScope.launch {
+            try {
+                // Check if user exists in database
+                val users = AppwriteManager.databases.listDocuments(
+                    databaseId = AppwriteManager.DATABASE_ID,
+                    collectionId = AppwriteManager.Collections.USERS,
+                    queries = listOf(io.appwrite.Query.equal("email", email))
+                )
 
-        auth.sendPasswordResetEmail(email)
-            .addOnCompleteListener { task ->
-                loadingDialog.dismiss()
-                if (task.isSuccessful) {
-                    showSuccess("Password reset email sent to $email")
-                    startCooldown()
-                } else {
-                    showError("Failed to send reset email. Please try again.")
+                if (users.documents.isEmpty()) {
+                    showError("No account found with this email address")
+                    loadingDialog.dismiss()
+                    return@launch
                 }
+
+                // Send password reset email
+                account.createRecovery(
+                    email = email,
+                    url = AppwriteManager.ENDPOINT
+                )
+
+                loadingDialog.dismiss()
+                showSuccess("Password reset link has been sent to your email")
+                startCooldown()
+            } catch (e: AppwriteException) {
+                loadingDialog.dismiss()
+                showError("Failed to send reset email: ${e.message}")
             }
+        }
     }
 
     private fun validateEmail(email: String): Boolean {
         return if (email.isEmpty()) {
-            emailInputLayout.error = "Email is required"
+            binding.emailInputLayout.error = "Email is required"
             false
         } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailInputLayout.error = "Enter a valid email"
+            binding.emailInputLayout.error = "Enter a valid email"
             false
         } else {
-            emailInputLayout.error = null
+            binding.emailInputLayout.error = null
             true
         }
     }
 
     private fun startCooldown() {
-        resetButton.isEnabled = false
+        binding.resetButton.isEnabled = false
         object : CountDownTimer(cooldownDuration, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 isCooldownActive = true
                 val secondsLeft = millisUntilFinished / 1000
-                resetButton.text = "Wait ${secondsLeft}s"
+                binding.resetButton.text = "Wait ${secondsLeft}s"
             }
 
             override fun onFinish() {
                 isCooldownActive = false
-                resetButton.isEnabled = true
-                resetButton.text = "Send Reset Link"
+                binding.resetButton.isEnabled = true
+                binding.resetButton.text = "Send Reset Link"
             }
         }.start()
     }

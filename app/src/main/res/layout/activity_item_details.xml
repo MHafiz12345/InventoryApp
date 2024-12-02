@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/background_light">
 
+    <!-- AppBar -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
@@ -26,12 +27,20 @@
                 android:textColor="@color/dark_blue"
                 android:textSize="20sp"
                 android:textStyle="bold" />
-
         </androidx.appcompat.widget.Toolbar>
-
     </com.google.android.material.appbar.AppBarLayout>
 
+    <!-- Loading Progress -->
+    <ProgressBar
+        android:id="@+id/loadingProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- Main Content -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/contentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -42,26 +51,10 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Image Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
-
-                <ImageView
-                    android:id="@+id/itemImage"
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:scaleType="centerCrop"
-                    android:background="@drawable/bg_image_placeholder"/>
-            </com.google.android.material.card.MaterialCardView>
-
             <!-- Details Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp">
 
@@ -71,14 +64,43 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
+                    <!-- Item Name and Status -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/itemName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textColor="@color/dark_gray"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/statusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_chip"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="4dp"
+                            android:textColor="@color/white"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- SKU -->
                     <TextView
-                        android:id="@+id/itemName"
+                        android:id="@+id/skuText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/dark_gray"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="14sp" />
 
+                    <!-- Category (hidden by default) -->
                     <TextView
                         android:id="@+id/categoryChip"
                         android:layout_width="wrap_content"
@@ -88,8 +110,10 @@
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="4dp"
                         android:textColor="@color/white"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        android:visibility="gone" />
 
+                    <!-- Price -->
                     <TextView
                         android:id="@+id/priceText"
                         android:layout_width="wrap_content"
@@ -99,13 +123,14 @@
                         android:textSize="24sp"
                         android:textStyle="bold" />
 
+                    <!-- Divider -->
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginVertical="16dp"
                         android:background="@color/divider" />
 
-                    <!-- Stock Section -->
+                    <!-- Stock Information -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -120,6 +145,7 @@
                         android:layout_marginTop="12dp"
                         android:orientation="horizontal">
 
+                        <!-- Current Stock -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -143,6 +169,7 @@
                                 android:textStyle="bold" />
                         </LinearLayout>
 
+                        <!-- Minimum Stock -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -167,11 +194,12 @@
                         </LinearLayout>
                     </LinearLayout>
 
+                    <!-- Stock Adjustment Button -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/adjustStockButton"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="16dp"
                         android:backgroundTint="@color/dark_blue"
                         android:text="Adjust Stock"
                         android:textAllCaps="false"
@@ -221,6 +249,7 @@
                             android:id="@+id/floorText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="32dp"
                             android:layout_marginTop="8dp"
                             android:textColor="@color/medium_gray"
                             android:textSize="14sp" />
@@ -229,15 +258,86 @@
                             android:id="@+id/sectionText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="32dp"
                             android:layout_marginTop="4dp"
                             android:textColor="@color/medium_gray"
                             android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- Activity History Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Activity History"
+                        android:textColor="@color/dark_gray"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <!-- Stock Movement History -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Stock Movements"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="14sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/stockMovementsRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:nestedScrollingEnabled="false" />
+
+                    <!-- Activity Logs -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Recent Changes"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="14sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/activityLogsRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:nestedScrollingEnabled="false" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Delete Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/deleteButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="@color/error_red"
+                android:text="Delete Item"
+                android:textAllCaps="false"
+                app:cornerRadius="8dp" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Edit FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/editFab"
         android:layout_width="wrap_content"

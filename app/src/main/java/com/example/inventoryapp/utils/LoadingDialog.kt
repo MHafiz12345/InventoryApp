@@ -1,12 +1,11 @@
 package com.example.inventoryapp.utils
 
 import android.app.Dialog
-import android.content.Context
 import android.view.LayoutInflater
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 import com.example.inventoryapp.R
 
-class LoadingDialog(private val activity: AppCompatActivity) {
+class LoadingDialog(private val activity: FragmentActivity) {
     private var dialog: Dialog? = null
 
     fun show() {

@@ -7,5 +7,6 @@ data class LowStockItem(
     val minStock: Int = 0,
     val warehouseName: String = "",
     val floor: String = "",
-    val location: String = ""
+    val location: String = "",
+    val sku: String = "" // Added the missing 'sku' field
 )

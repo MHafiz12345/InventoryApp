@@ -4,56 +4,43 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.databinding.ItemLowStockBinding
-import com.example.inventoryapp.models.InventoryItem
+import com.example.inventoryapp.models.LowStockItem
 
-class LowStockAdapter(
-    private val onItemClick: ((InventoryItem) -> Unit)? = null
-) : RecyclerView.Adapter<LowStockAdapter.LowStockViewHolder>() {
+class LowStockAdapter : RecyclerView.Adapter<LowStockAdapter.LowStockViewHolder>() {
+    private var items = listOf<LowStockItem>()
+    var onItemClick: ((LowStockItem) -> Unit)? = null
 
-    private var items: List<InventoryItem> = emptyList()
+    inner class LowStockViewHolder(private val binding: ItemLowStockBinding) :
+        RecyclerView.ViewHolder(binding.root) {
 
-    fun updateItems(newItems: List<InventoryItem>) {
-        items = newItems
-        notifyDataSetChanged()
+        fun bind(item: LowStockItem) {
+            binding.apply {
+                itemNameText.text = item.name
+                stockText.text = "${item.currentStock}/${item.minStock}"
+                locationText.text = "${item.warehouseName} - ${item.floor} ${item.location}"
+
+                root.setOnClickListener {
+                    onItemClick?.invoke(item)
+                }
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LowStockViewHolder {
         val binding = ItemLowStockBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
+            LayoutInflater.from(parent.context), parent, false
         )
-        return LowStockViewHolder(binding, onItemClick)
+        return LowStockViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: LowStockViewHolder, position: Int) {
         holder.bind(items[position])
     }
 
-    override fun getItemCount(): Int = items.size
+    override fun getItemCount() = items.size
 
-    class LowStockViewHolder(
-        private val binding: ItemLowStockBinding,
-        private val onItemClick: ((InventoryItem) -> Unit)?
-    ) : RecyclerView.ViewHolder(binding.root) {
-
-        fun bind(item: InventoryItem) {
-            binding.apply {
-                itemNameText.text = item.name
-                locationText.text = buildString {
-                    append(item.location.warehouseName)
-                    append(" - ")
-                    append(item.location.floor)
-                    append(" - ")
-                    append(item.location.section)
-                }
-                stockText.text = "${item.currentStock}/${item.minStock}"
-
-                // Set click listener
-                root.setOnClickListener {
-                    onItemClick?.invoke(item)
-                }
-            }
-        }
+    fun updateItems(newItems: List<LowStockItem>) {
+        items = newItems
+        notifyDataSetChanged()
     }
 }

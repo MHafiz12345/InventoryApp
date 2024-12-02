@@ -6,7 +6,13 @@
     <color name="background_light">#F5F5F5</color>
     <color name="warning">#F44336</color>
     <color name="warning_bg">#FFF3F3</color>
+    <color name="warning_red">#F44336</color>
+    <color name="admin_role">#FF5722</color>  <!-- Orange for admin -->
+    <color name="staff_role">#4CAF50</color>  <!-- Green for staff -->
 
+    <color name="status_active">#4CAF50</color>     <!-- Green for Active -->
+    <color name="status_inactive">#FF9800</color>   <!-- Orange for Inactive -->
+    <color name="status_discontinued">#F44336</color><!-- Red for Discontinued -->
 
 
     <color name="dark_blue">#1a237e</color>

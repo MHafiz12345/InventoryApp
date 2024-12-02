@@ -1,251 +1,413 @@
 package com.example.inventoryapp.activities
 
 import android.content.Intent
+import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.inventoryapp.AppwriteManager
 import com.example.inventoryapp.R
-import com.example.inventoryapp.adapters.DashboardStatAdapter
+import com.example.inventoryapp.adapters.DashboardStatsAdapter
 import com.example.inventoryapp.adapters.LowStockAdapter
-import com.example.inventoryapp.base.BaseActivity
 import com.example.inventoryapp.databinding.ActivityDashboardBinding
-import com.example.inventoryapp.models.*
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
+import com.example.inventoryapp.fragments.InventoryFragment
+import com.example.inventoryapp.fragments.ProfileFragment
+import com.example.inventoryapp.fragments.UserManagementFragment
+import com.example.inventoryapp.models.DashboardStat
+import com.example.inventoryapp.models.LowStockItem
+import com.example.inventoryapp.models.Warehouse
+import com.example.inventoryapp.managers.RoleManager
+import io.appwrite.Query
+import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.Locale
 
-class DashboardActivity : BaseActivity<ActivityDashboardBinding>() {
-    private val firestore = FirebaseFirestore.getInstance()
-    private val statAdapter = DashboardStatAdapter()
+class DashboardActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityDashboardBinding
+    private val statsAdapter = DashboardStatsAdapter()
     private val lowStockAdapter = LowStockAdapter()
-
     private var selectedWarehouse: Warehouse? = null
+    private var warehouses = listOf<Warehouse>()
 
-    override fun getLayoutResId(): Int = R.layout.activity_dashboard
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityDashboardBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-    override fun inflateViewBinding(): ActivityDashboardBinding =
-        ActivityDashboardBinding.inflate(layoutInflater)
-
-    override fun initializeViews() {
         setupRecyclerViews()
-        setupClickListeners()
-        loadWarehouses() // Initial load
+        setupWarehouseSelector()
+        setupSwipeRefresh()
+        setupQuickActions()
+        setupBottomNavigation()
+        setupErrorView()
+
+        // Initial load
+        loadDashboardData()
     }
 
-    private fun setupRecyclerViews() {
-        binding.apply {
-            // Stats RecyclerView
-            statsRecyclerView.apply {
-                layoutManager = LinearLayoutManager(
-                    this@DashboardActivity,
-                    LinearLayoutManager.HORIZONTAL,
-                    false
-                )
-                adapter = statAdapter
-            }
-
-            // Low Stock RecyclerView
-            lowStockRecyclerView.apply {
-                layoutManager = LinearLayoutManager(this@DashboardActivity)
-                adapter = lowStockAdapter
-                isNestedScrollingEnabled = false
+    private fun setupBottomNavigation() {
+        lifecycleScope.launch {
+            // Check if user is admin
+            if (RoleManager.isAdmin()) {
+                // For admin, we'll include the admin navigation case
+                setupAdminBottomBar()
+            } else {
+                // For regular users, just setup normal navigation
+                setupRegularBottomBar()
             }
         }
     }
 
-    // In DashboardActivity.kt, replace the bottom bar setup with:
-
-    private fun setupClickListeners() {
-        binding.apply {
-            // Warehouse selector
-            warehouseSelector.setOnClickListener {
-                showWarehouseSelector()
+    private fun setupAdminBottomBar() {
+        binding.bottomBar.onItemSelected = { position ->
+            when (position) {
+                0 -> {
+                    // Dashboard - show main content, hide fragment container
+                    binding.apply {
+                        swipeRefresh.visibility = View.VISIBLE
+                        fragmentContainer.visibility = View.GONE
+                        errorView.root.visibility = View.GONE
+                        warehouseSelector.visibility = View.VISIBLE
+                        statsRecyclerView.visibility = View.VISIBLE
+                        lowStockRecyclerView.visibility = View.VISIBLE
+                        toolbar.visibility = View.VISIBLE
+                    }
+                    loadDashboardData()
+                    true
+                }
+                1 -> {
+                    // Inventory
+                    binding.apply {
+                        swipeRefresh.visibility = View.GONE
+                        fragmentContainer.visibility = View.VISIBLE
+                        errorView.root.visibility = View.GONE
+                        warehouseSelector.visibility = View.GONE
+                        statsRecyclerView.visibility = View.GONE
+                        lowStockRecyclerView.visibility = View.GONE
+                    }
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, InventoryFragment())
+                        .commit()
+                    true
+                }
+                2 -> {
+                    // Profile
+                    binding.apply {
+                        swipeRefresh.visibility = View.GONE
+                        fragmentContainer.visibility = View.VISIBLE
+                        warehouseSelector.visibility = View.GONE
+                        statsRecyclerView.visibility = View.GONE
+                        lowStockRecyclerView.visibility = View.GONE
+                    }
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, ProfileFragment())
+                        .commit()
+                    true
+                }
+                3 -> {
+                    // Admin - only accessible if user is admin
+                    binding.apply {
+                        swipeRefresh.visibility = View.GONE
+                        fragmentContainer.visibility = View.VISIBLE
+                        errorView.root.visibility = View.GONE
+                        warehouseSelector.visibility = View.GONE
+                        statsRecyclerView.visibility = View.GONE
+                        lowStockRecyclerView.visibility = View.GONE
+                    }
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, UserManagementFragment())
+                        .commit()
+                    true
+                }
+                else -> false
             }
+        }
 
-            // Add Item action
-            addAction.setOnClickListener {
-                selectedWarehouse?.let { warehouse ->
-                    startActivity(
-                        Intent(
-                            this@DashboardActivity,
-                            AddEditItemActivity::class.java
-                        ).apply {
-                            putExtra("warehouse_id", warehouse.id)
-                        })
-                } ?: showError("Please select a warehouse first")
+        // Set initial selection
+        binding.bottomBar.setActiveItem(0)
+    }
+
+    private fun setupRegularBottomBar() {
+        binding.bottomBar.onItemSelected = { position ->
+            when (position) {
+                0 -> {
+                    // Dashboard - show main content, hide fragment container
+                    binding.apply {
+                        swipeRefresh.visibility = View.VISIBLE
+                        fragmentContainer.visibility = View.GONE
+                        errorView.root.visibility = View.GONE
+                        warehouseSelector.visibility = View.VISIBLE
+                        statsRecyclerView.visibility = View.VISIBLE
+                        lowStockRecyclerView.visibility = View.VISIBLE
+                        toolbar.visibility = View.VISIBLE
+                    }
+                    loadDashboardData()
+                    true
+                }
+                1 -> {
+                    // Inventory
+                    binding.apply {
+                        swipeRefresh.visibility = View.GONE
+                        fragmentContainer.visibility = View.VISIBLE
+                        errorView.root.visibility = View.GONE
+                        warehouseSelector.visibility = View.GONE
+                        statsRecyclerView.visibility = View.GONE
+                        lowStockRecyclerView.visibility = View.GONE
+                    }
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, InventoryFragment())
+                        .commit()
+                    true
+                }
+                2 -> {
+                    // Profile
+                    binding.apply {
+                        swipeRefresh.visibility = View.GONE
+                        fragmentContainer.visibility = View.VISIBLE
+                        warehouseSelector.visibility = View.GONE
+                        statsRecyclerView.visibility = View.GONE
+                        lowStockRecyclerView.visibility = View.GONE
+                    }
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, ProfileFragment())
+                        .commit()
+                    true
+                }
+                else -> false
             }
+        }
 
-            // Scan action
-            scanAction.setOnClickListener {
-                showError("Scan functionality coming soon")
+        // Set initial selection
+        binding.bottomBar.setActiveItem(0)
+    }
+
+    override fun onBackPressed() {
+        when {
+            binding.fragmentContainer.visibility == View.VISIBLE -> {
+                // If showing a fragment, return to dashboard
+                binding.bottomBar.setActiveItem(0)
+                binding.apply {
+                    fragmentContainer.visibility = View.GONE
+                    swipeRefresh.visibility = View.VISIBLE
+                    warehouseSelector.visibility = View.VISIBLE
+                    statsRecyclerView.visibility = View.VISIBLE
+                    lowStockRecyclerView.visibility = View.VISIBLE
+                    toolbar.visibility = View.VISIBLE
+                }
+                loadDashboardData()
             }
+            else -> super.onBackPressed()
+        }
+    }
 
-            // Swipe refresh
-            swipeRefresh.setOnRefreshListener {
-                selectedWarehouse?.let { loadWarehouseInventory(it.id) }
-                    ?: loadWarehouses()
-            }
+    private fun setupRecyclerViews() {
+        binding.statsRecyclerView.apply {
+            adapter = statsAdapter
+            layoutManager = GridLayoutManager(this@DashboardActivity, 2)
+        }
 
-            // Bottom navigation
-            bottomBar.onItemSelected = { position ->
-                when (position) {
-                    0 -> {} // Dashboard (current)
-                    1 -> {} // Implement other navigation items
-                    // Add more cases as needed
+        binding.lowStockRecyclerView.apply {
+            adapter = lowStockAdapter
+            layoutManager = LinearLayoutManager(this@DashboardActivity)
+        }
+
+        lowStockAdapter.onItemClick = { item ->
+            startActivity(
+                Intent(this, AddEditItemActivity::class.java)
+                    .putExtra("itemId", item.id)
+            )
+        }
+    }
+
+    private fun setupWarehouseSelector() {
+        binding.warehouseSelector.setOnClickListener {
+            if (warehouses.isNotEmpty()) {
+                showWarehouseDialog()
+            } else {
+                showError("No warehouses available") {
+                    loadWarehouses()
                 }
             }
+        }
+        loadWarehouses()
+    }
+
+    private fun setupSwipeRefresh() {
+        binding.swipeRefresh.setOnRefreshListener {
+            loadDashboardData()
+        }
+    }
+
+    private fun setupQuickActions() {
+        binding.addAction.setOnClickListener {
+            startActivity(Intent(this, AddEditItemActivity::class.java))
+        }
+
+        binding.scanAction.setOnClickListener {
+            // TODO: Implement scan functionality if needed
+        }
+    }
+
+    private fun setupErrorView() {
+        binding.errorView.retryButton.setOnClickListener {
+            binding.errorView.root.visibility = View.GONE
+            loadDashboardData()
+        }
+    }
+
+    private fun showLoading(show: Boolean) {
+        binding.swipeRefresh.isRefreshing = show
+    }
+
+    private fun showError(message: String, retryAction: (() -> Unit)? = null) {
+        binding.errorView.apply {
+            root.visibility = View.VISIBLE
+            errorText.text = message
+            retryButton.setOnClickListener {
+                root.visibility = View.GONE
+                retryAction?.invoke()
+            }
+        }
+    }
+
+    private fun loadDashboardData() {
+        lifecycleScope.launch {
+            try {
+                showLoading(true)
+                binding.errorView.root.visibility = View.GONE
+
+                // Load stats
+                val stats = loadStats()
+                statsAdapter.updateStats(stats)
+
+                // Load low stock items
+                val lowStockItems = loadLowStockItems()
+                lowStockAdapter.updateItems(lowStockItems)
+
+                // Update visibility
+                binding.lowStockEmptyMessage.visibility =
+                    if (lowStockItems.isEmpty()) View.VISIBLE else View.GONE
+
+            } catch (e: Exception) {
+                showError("Failed to load dashboard: ${e.message}") {
+                    loadDashboardData()
+                }
+            } finally {
+                showLoading(false)
+            }
+        }
+    }
+
+    private suspend fun loadStats(): List<DashboardStat> {
+        val databases = AppwriteManager.databases
+        val warehouseId = selectedWarehouse?.id
+        val queries = mutableListOf(Query.equal("status", "Active"))
+        warehouseId?.let { queries.add(Query.equal("warehouseId", listOf(it))) }
+
+        val items = databases.listDocuments(
+            databaseId = AppwriteManager.DATABASE_ID,
+            collectionId = AppwriteManager.Collections.INVENTORY_ITEMS,
+            queries = queries
+        )
+
+        val totalItems = items.total
+        val totalValue = items.documents.sumOf {
+            val price = (it.data["price"] as? Number)?.toDouble() ?: 0.0
+            val stock = (it.data["currentStock"] as? Number)?.toInt() ?: 0
+            price * stock
+        }
+
+        // Fix for low stock count calculation
+        val lowStockCount = items.documents.count {
+            val currentStock = (it.data["currentStock"] as? Number)?.toInt() ?: 0
+            val minStock = (it.data["minStock"] as? Number)?.toInt() ?: 0
+            currentStock < minStock  // Changed from <= to < for strict low stock definition
+        }
+
+        return listOf(
+            DashboardStat("Total Items", totalItems.toString(), R.drawable.ic_inventory),
+            DashboardStat(
+                "Total Value",
+                NumberFormat.getCurrencyInstance(Locale.US).format(totalValue),
+                R.drawable.ic_money
+            ),
+            DashboardStat(
+                "Low Stock Items",
+                lowStockCount.toString(),
+                R.drawable.ic_warning,
+                warning = lowStockCount > 0
+            )
+        )
+    }
+
+    private suspend fun loadLowStockItems(): List<LowStockItem> {
+        val databases = AppwriteManager.databases
+        val warehouseId = selectedWarehouse?.id
+        val queries = mutableListOf(Query.equal("status", "Active")) // Only active items
+        warehouseId?.let { queries.add(Query.equal("warehouseId", listOf(it))) }
+
+        val items = databases.listDocuments(
+            databaseId = AppwriteManager.DATABASE_ID,
+            collectionId = AppwriteManager.Collections.INVENTORY_ITEMS,
+            queries = queries
+        )
+
+        return items.documents.mapNotNull {
+            val currentStock = (it.data["currentStock"] as? Number)?.toInt() ?: return@mapNotNull null
+            val minStock = (it.data["minStock"] as? Number)?.toInt() ?: return@mapNotNull null
+            val sku = it.data["sku"] as? String ?: "Unknown SKU"
+
+            if (currentStock < minStock) {  // Changed from <= to
+                LowStockItem(
+                    id = it.id,
+                    name = it.data["name"] as? String ?: "Unknown Item",
+                    currentStock = currentStock,
+                    minStock = minStock,
+                    warehouseName = selectedWarehouse?.name ?: "All Warehouses",
+                    floor = it.data["floor"] as? String ?: "",
+                    location = it.data["section"] as? String ?: "",
+                    sku = sku
+                )
+            } else null
         }
     }
 
     private fun loadWarehouses() {
-        showLoading(true)
-        firestore.collection("warehouses")
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val warehouses = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Warehouse::class.java)?.apply { id = doc.id }
-                }
-
-                if (warehouses.isNotEmpty()) {
-                    // Select first warehouse if none selected
-                    if (selectedWarehouse == null) {
-                        selectedWarehouse = warehouses.first()
-                        binding.warehouseSelector.text = warehouses.first().name
-                        loadWarehouseInventory(warehouses.first().id)
-                    }
-                } else {
-                    showError("No warehouses available")
-                    showLoading(false)
-                }
-            }
-            .addOnFailureListener { e ->
-                showError("Failed to load warehouses: ${e.message}")
-                showLoading(false)
-            }
-    }
-
-    private fun showWarehouseSelector() {
-        showLoading(true)
-        firestore.collection("warehouses")
-            .get()
-            .addOnSuccessListener { snapshot ->
-                showLoading(false)
-                val warehouses = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Warehouse::class.java)?.apply { id = doc.id }
-                }
-
-                if (warehouses.isEmpty()) {
-                    showError("No warehouses available")
-                    return@addOnSuccessListener
-                }
-
-                MaterialAlertDialogBuilder(this)
-                    .setTitle("Select Warehouse")
-                    .setSingleChoiceItems(
-                        warehouses.map { it.name }.toTypedArray(),
-                        warehouses.indexOfFirst { it.id == selectedWarehouse?.id }
-                    ) { dialog, which ->
-                        val selected = warehouses[which]
-                        selectedWarehouse = selected
-                        binding.warehouseSelector.text = selected.name
-                        loadWarehouseInventory(selected.id)
-                        dialog.dismiss()
-                    }
-                    .show()
-            }
-            .addOnFailureListener { e ->
-                showLoading(false)
-                showError("Failed to load warehouses: ${e.message}")
-            }
-    }
-
-    private fun loadWarehouseInventory(warehouseId: String) {
-        showLoading(true)
-        binding.swipeRefresh.isRefreshing = true
-
-        // Query all items for this warehouse across all categories
-        firestore.collectionGroup("items")
-            .whereEqualTo("location.warehouseId", warehouseId)
-            .orderBy("updatedAt", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val items = snapshot.documents.mapNotNull {
-                    it.toObject(InventoryItem::class.java)
-                }
-                updateDashboard(items)
-                binding.swipeRefresh.isRefreshing = false
-                showLoading(false)
-            }
-            .addOnFailureListener { e ->
-                showError("Failed to load inventory: ${e.message}")
-                binding.swipeRefresh.isRefreshing = false
-                showLoading(false)
-            }
-    }
-
-    private fun updateDashboard(items: List<InventoryItem>) {
-        binding.apply {
-            if (items.isEmpty()) {
-                // Show empty state
-                statsRecyclerView.visibility = View.GONE
-                lowStockCard.visibility = View.GONE
-                quickActionsGrid.visibility = View.GONE
-                // Instead of using a separate empty state layout, use the lowStockEmptyMessage
-                lowStockEmptyMessage.visibility = View.VISIBLE
-                lowStockEmptyMessage.text = "No items found in this warehouse"
-            } else {
-                // Show content state
-                statsRecyclerView.visibility = View.VISIBLE
-                lowStockCard.visibility = View.VISIBLE
-                quickActionsGrid.visibility = View.VISIBLE
-
-                // Update statistics
-                val stats = listOf(
-                    DashboardStat(
-                        title = "Total Items",
-                        value = items.size.toString(),
-                        icon = R.drawable.ic_inventory
-                    ),
-                    DashboardStat(
-                        title = "Low Stock",
-                        value = items.count { it.currentStock <= it.minStock }.toString(),
-                        icon = R.drawable.ic_warning,
-                        warning = true
-                    ),
-                    DashboardStat(
-                        title = "Total Value",
-                        value = "$%.2f".format(items.sumOf { it.price * it.currentStock }),
-                        icon = R.drawable.ic_money
-                    )
+        lifecycleScope.launch {
+            try {
+                val response = AppwriteManager.databases.listDocuments(
+                    databaseId = AppwriteManager.DATABASE_ID,
+                    collectionId = AppwriteManager.Collections.WAREHOUSES
                 )
-                statAdapter.updateStats(stats)
 
-                // Update low stock items
-                val lowStockItems = items.filter { it.currentStock <= it.minStock }
-                if (lowStockItems.isEmpty()) {
-                    lowStockEmptyMessage.visibility = View.VISIBLE
-                    lowStockRecyclerView.visibility = View.GONE
-                    lowStockEmptyMessage.text = "No low stock items to display"
-                } else {
-                    lowStockEmptyMessage.visibility = View.GONE
-                    lowStockRecyclerView.visibility = View.VISIBLE
-                    lowStockAdapter.updateItems(lowStockItems.sortedBy { it.currentStock })
+                warehouses = response.documents.map {
+                    Warehouse(
+                        id = it.id,
+                        name = it.data["name"] as String,
+                        location = it.data["location"] as String,
+                        address = it.data["address"] as? String,
+                        floors = it.data["floors"] as List<String>,
+                        sections = it.data["sections"] as List<String>
+                    )
                 }
-
-                // Calculate and show additional metrics if needed
-                val totalCategories = items.map { it.category }.distinct().size
-                val averageValue = if (items.isNotEmpty()) {
-                    items.sumOf { it.price * it.currentStock } / items.size
-                } else 0.0
+                binding.warehouseSelector.text = "All Warehouses"
+            } catch (e: Exception) {
+                showError("Failed to load warehouses: ${e.message}")
             }
-
-            // Show/hide the refresh indicator
-            swipeRefresh.isRefreshing = false
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Refresh data when returning to dashboard
-        selectedWarehouse?.let { loadWarehouseInventory(it.id) }
+    private fun showWarehouseDialog() {
+        val items = listOf("All Warehouses") + warehouses.map { it.name }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Select Warehouse")
+            .setItems(items.toTypedArray()) { _, which ->
+                selectedWarehouse = if (which == 0) null else warehouses[which - 1]
+                binding.warehouseSelector.text = items[which]
+                loadDashboardData()
+            }
+            .show()
     }
 }
